@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin xmlns="http://cordova.apache.org/ns/plugins/1.0"
+    id="id.kodekreatif.PDFDigiSign"
+    version="1.0.0">
+    <name>KodeKreatif PDF DigiSign</name>
+    <description>PDF Signer for Cordova/Phonegap</description>
+    <license>AGPL version 3.0</license>
+    <keywords>key,pki,pdf,security</keywords>
+    <repo>https://github.com/kodekreatif/cordova-plugin-pdfdigisign</repo>
+    
+    <js-module src="www/pdfDigiSign.js" name="PDFDigiSign">
+        <clobbers target="PDFDigiSign" />
+    </js-module>
+
+    <!-- android -->
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="PDFDigiSign" >
+                <param name="android-package" value="id.kodekreatif.cordova.PDFDigiSign.PDFDigiSign"/>
+            </feature>
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+        </config-file>
+
+        <!-- cordova plugin src files -->
+        <source-file src="src/PDFDigiSign.java" target-dir="src/id/kodekreatif/cordova/PDFDigiSign" />
+        <source-file src="src/PDFDigiSignData.java" target-dir="src/id/kodekreatif/cordova/PDFDigiSign" />
+        <source-file src="libs/pkix-1.51.0.0.jar" target-dir="libs/" />
+        <source-file src="libs/prov-1.51.0.0.jar" target-dir="libs/" />
+        <source-file src="libs/core-1.51.0.0.jar" target-dir="libs/" />
+        <source-file src="libs/commons-logging-1.1.2.jar" target-dir="libs/" />
+        <source-file src="libs/pdfbox-android-1.8.8.jar" target-dir="libs/" />
+    </platform>
+</plugin>
