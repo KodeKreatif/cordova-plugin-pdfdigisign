@@ -17,7 +17,7 @@ import java.security.cert.CertStore;
 import java.security.cert.Certificate;
 import java.security.cert.CollectionCertStoreParameters;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -26,6 +26,9 @@ import android.security.KeyChain;
 import android.security.KeyChainException;
 import android.security.KeyChainAliasCallback;
 import android.util.Log;
+
+import org.spongycastle.asn1.ASN1Primitive;
+import org.spongycastle.cert.X509CertificateHolder;
 
 import org.spongycastle.cert.jcajce.JcaCertStore;
 import org.spongycastle.cms.CMSSignedData;
@@ -54,7 +57,7 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
   Context context;
 
   private PrivateKey privKey;
-  private X509Certificate[] cert;
+  private Certificate cert;
 
   @Override
   public boolean execute(String action, JSONArray data, final CallbackContext callbackContext) throws JSONException {
@@ -92,7 +95,8 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
 
     this.callbackContext = callbackContext;
     privKey = KeyChain.getPrivateKey(context, alias);
-    cert = KeyChain.getCertificateChain(context, alias);
+    Certificate[] chain = KeyChain.getCertificateChain(context, alias);
+    cert = chain[0];
     File document = new File(path);
 
     if (!(document != null && document.exists()))
@@ -137,18 +141,21 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
   {
     CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
     PDFDigiSignData input = new PDFDigiSignData(content);
-    List<X509Certificate> certs = Arrays.asList(cert);
+    List<Certificate> certs = new ArrayList<Certificate>();
+    certs.add(cert);
 
-    Store certStore = null;
     try
     {
-      certStore = new JcaCertStore(certs);
+      Store certStore = new JcaCertStore(certs);
+
+      org.spongycastle.asn1.x509.Certificate x509Cert =
+        org.spongycastle.asn1.x509.Certificate.getInstance(ASN1Primitive.fromByteArray(cert.getEncoded()));
 
       ContentSigner sha256Signer = new JcaContentSignerBuilder("SHA256withRSA").build(privKey);
       gen.addSignerInfoGenerator(
                new JcaSignerInfoGeneratorBuilder(
                new JcaDigestCalculatorProviderBuilder().build())
-               .build(sha256Signer, (X509Certificate)certs.get(0)));
+               .build(sha256Signer, new X509CertificateHolder(x509Cert)));
 
       gen.addCertificates(certStore);
       CMSSignedData signedData = gen.generate(input, false);
