@@ -102,18 +102,9 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
     if (!(document != null && document.exists()))
       new RuntimeException("");
 
-    FileInputStream fis = new FileInputStream(document);
     File outputDocument = new File(document.getPath() + ".signed.pdf");
     FileOutputStream fos = new FileOutputStream(outputDocument);
 
-    int c;
-    while ((c = fis.read(buffer)) != -1)
-    {
-      fos.write(buffer, 0, c);
-    }
-    fis.close();
-
-    fis = new FileInputStream(outputDocument);
     PDDocument doc = PDDocument.load(document);
 
     PDSignature signature = new PDSignature();
@@ -125,6 +116,7 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
     signature.setSignDate(Calendar.getInstance());
     doc.addSignature(signature, this);
     doc.saveIncremental(fos);
+    doc.close();
 
     File resultDocument = new File(path);
     File removeDocument = new File(document.getPath() + ".unsigned.pdf");
