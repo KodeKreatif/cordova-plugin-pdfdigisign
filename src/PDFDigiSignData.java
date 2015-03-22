@@ -31,7 +31,7 @@ class PDFDigiSignData implements CMSTypedData
   @Override
   public Object getContent()
   {
-    return null;
+    return in;
   }
 
   @Override
