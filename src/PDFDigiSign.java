@@ -11,10 +11,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.InterruptedException;
+import java.lang.StringBuilder;
 
 import java.security.PrivateKey;
 import java.security.cert.CertStore;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CollectionCertStoreParameters;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -41,6 +43,11 @@ import org.spongycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.spongycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.spongycastle.util.Store;
 
+import org.apache.pdfbox.cos.COSArray;
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSString;
+
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface;
@@ -59,8 +66,8 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
 
   @Override
   public boolean execute(String action, JSONArray data, final CallbackContext callbackContext) throws JSONException {
+    context = cordova.getActivity(); 
     if (action.equals("signWithAlias")) {
-      context = cordova.getActivity(); 
       final String path = data.getString(0);
       final String alias = data.getString(1);
       final String name = data.getString(2);
@@ -81,11 +88,92 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
         }
       });
       return true;
+    } else if (action.equals("validate")) {
+      final String path = data.getString(0);
+      cordova.getThreadPool().execute(new Runnable() {
+        public void run() {
+            try {
+              String info = validate(path);
+              if (info == null) {
+                callbackContext.error(0);
+              } else {
+                callbackContext.success(info);
+              }
+            }
+            catch (Exception e)
+            {
+              e.printStackTrace();
+              callbackContext.error(-1); 
+            }
+        }
+      });
+      return true;
     } else {
+
       return false;
     }
   }
 
+  public String getInfoFromCert(final COSDictionary cert) {
+    StringBuilder s = new StringBuilder();
+    String name = cert.getString(COSName.NAME, "Unknown");
+    String modified = cert.getString(COSName.M);
+
+    s.append("{");
+    s.append("\"hasSignature\":true,");
+    s.append("\"name\":\"" + name + "\", ");
+    s.append("\"modified\": '" + modified + "\" ");
+    s.append("}");
+
+    COSName subFilter = (COSName) cert.getDictionaryObject(COSName.SUB_FILTER);
+
+    if (subFilter == null) {
+      return null;
+    }
+    return s.toString();
+  }
+
+  public String validate(final String path) throws IOException, CertificateException {
+    String infoString = null;
+    PDDocument document = null;
+    try {
+      document = PDDocument.load(new File(path));
+
+      COSDictionary trailer = document.getDocument().getTrailer();
+      COSDictionary root = (COSDictionary) trailer.getDictionaryObject(COSName.ROOT);
+      COSDictionary acroForm = (COSDictionary) trailer.getDictionaryObject(COSName.ACRO_FORM);
+      if (acroForm == null) {
+        infoString = "{ \"hasSignature\": false}";
+        return infoString;
+      }
+      COSArray fields = (COSArray) acroForm.getDictionaryObject(COSName.FIELDS);
+
+      boolean certFound = false;
+      for (int i = 0; i < fields.size(); i ++) {
+        COSDictionary field = (COSDictionary) fields.getObject(i);
+
+        COSName type = field.getCOSName(COSName.FT);
+        if (COSName.SIG.equals(type)) {
+          COSDictionary cert = (COSDictionary) field.getDictionaryObject(COSName.V);
+          if (cert != null) {
+            infoString = getInfoFromCert(cert);
+            certFound = true;
+          }
+        }
+
+      }
+      if (certFound != true) {
+        infoString = "{ \"hasSignature\": false}";
+      }
+
+    }
+    finally {
+      if (document != null) {
+        document.close();
+      }
+    }
+    return infoString;
+  }
 
   public void signWithAlias(final String path, final String alias, final String name, final String location, final String reason) throws IOException, InterruptedException, KeyChainException 
   {
