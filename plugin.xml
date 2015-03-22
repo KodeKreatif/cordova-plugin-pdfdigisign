@@ -33,6 +33,6 @@
         <source-file src="libs/prov-1.51.0.0.jar" target-dir="libs/" />
         <source-file src="libs/core-1.51.0.0.jar" target-dir="libs/" />
         <source-file src="libs/commons-logging-1.1.2.jar" target-dir="libs/" />
-        <source-file src="libs/pdfbox-android-1.8.8.jar" target-dir="libs/" />
+        <source-file src="libs/pdfbox-2.0.0.jar" target-dir="libs/" />
     </platform>
 </plugin>

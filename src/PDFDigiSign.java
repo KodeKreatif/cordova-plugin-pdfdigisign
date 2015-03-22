@@ -41,8 +41,6 @@ import org.spongycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.spongycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.spongycastle.util.Store;
 
-import org.apache.pdfbox.exceptions.COSVisitorException;
-import org.apache.pdfbox.exceptions.SignatureException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface;
@@ -89,7 +87,7 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
   }
 
 
-  public void signWithAlias(final String path, final String alias, final String name, final String location, final String reason) throws IOException, InterruptedException, COSVisitorException, KeyChainException, SignatureException
+  public void signWithAlias(final String path, final String alias, final String name, final String location, final String reason) throws IOException, InterruptedException, KeyChainException 
   {
     byte[] buffer = new byte[BUFFER_SIZE];
 
