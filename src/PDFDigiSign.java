@@ -4,6 +4,7 @@ import org.apache.cordova.*;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -17,10 +18,12 @@ import java.security.PrivateKey;
 import java.security.cert.CertStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.CollectionCertStoreParameters;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.List;
 
 import android.content.Context;
@@ -128,14 +131,43 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
     s.append("\"modified\": \"" + modified + "\", ");
     s.append("\"location\": \"" + location + "\", ");
     s.append("\"reason\": \"" + reason + "\", ");
-    s.append("\"contactInfo\": \"" + contactInfo + "\" ");
-    s.append("}");
+    s.append("\"contactInfo\": \"" + contactInfo + "\", ");
 
     COSName subFilter = (COSName) cert.getDictionaryObject(COSName.SUB_FILTER);
 
     if (subFilter == null) {
       return null;
     }
+
+    try {
+      COSString certString = (COSString) cert.getDictionaryObject(COSName.CONTENTS);
+      byte[] certData = certString.getBytes();
+      CertificateFactory factory = CertificateFactory.getInstance("X.509");
+      ByteArrayInputStream certStream = new ByteArrayInputStream(certData);
+      Collection<? extends Certificate> certs = factory.generateCertificates(certStream);
+
+      StringBuilder certJSON = new StringBuilder();
+
+      String comma = "";
+      for (Certificate c: certs) {
+        X509Certificate x509 = (X509Certificate) c;
+        certJSON.append(comma);
+        certJSON.append("{ ");
+        certJSON.append("\"serialNumber\": \"" + x509.getSerialNumber().toString() + "\",");
+        certJSON.append("\"signature\": \"" + x509.getSignature().toString() + "\",");
+        certJSON.append("\"subject\": \"" + x509.getSubjectX500Principal().toString() + "\",");
+        certJSON.append("\"issuer\": \"" + x509.getIssuerX500Principal().toString() + "\"");
+        certJSON.append("} ");
+        comma = ",";
+      }
+      s.append("\"certs\": [" + certJSON.toString() + "]");
+      s.append("}");
+    } catch (CertificateException e) {
+      e.printStackTrace();
+      s = null;
+    }
+
+
     return s.toString();
   }
 
