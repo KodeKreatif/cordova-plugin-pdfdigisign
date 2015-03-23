@@ -117,12 +117,18 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
   public String getInfoFromCert(final COSDictionary cert) {
     StringBuilder s = new StringBuilder();
     String name = cert.getString(COSName.NAME, "Unknown");
+    String location = cert.getString(COSName.LOCATION, "Unknown");
+    String reason = cert.getString(COSName.REASON, "Unknown");
+    String contactInfo = cert.getString(COSName.CONTACT_INFO, "Unknown");
     String modified = cert.getString(COSName.M);
 
     s.append("{");
     s.append("\"hasSignature\":true,");
     s.append("\"name\":\"" + name + "\", ");
-    s.append("\"modified\": '" + modified + "\" ");
+    s.append("\"modified\": \"" + modified + "\", ");
+    s.append("\"location\": \"" + location + "\", ");
+    s.append("\"reason\": \"" + reason + "\", ");
+    s.append("\"contactInfo\": \"" + contactInfo + "\" ");
     s.append("}");
 
     COSName subFilter = (COSName) cert.getDictionaryObject(COSName.SUB_FILTER);
@@ -141,7 +147,8 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
 
       COSDictionary trailer = document.getDocument().getTrailer();
       COSDictionary root = (COSDictionary) trailer.getDictionaryObject(COSName.ROOT);
-      COSDictionary acroForm = (COSDictionary) trailer.getDictionaryObject(COSName.ACRO_FORM);
+      COSDictionary acroForm = (COSDictionary) root.getDictionaryObject(COSName.ACRO_FORM);
+      Log.d(TAG, "acroForm " + path + ": " +(acroForm == null));
       if (acroForm == null) {
         infoString = "{ \"hasSignature\": false}";
         return infoString;
