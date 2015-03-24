@@ -118,6 +118,17 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
     }
   }
 
+  // http://stackoverflow.com/a/9855338
+  private static String bytesToHex(byte[] bytes) {
+    final char[] hexArray = "0123456789ABCDEF".toCharArray();
+    char[] hexChars = new char[bytes.length * 2];
+    for ( int j = 0; j < bytes.length; j++ ) {
+      int v = bytes[j] & 0xFF;
+      hexChars[j * 2] = hexArray[v >>> 4];
+      hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+    }
+    return new String(hexChars);
+  }
   public String getInfoFromCert(final COSDictionary cert) {
     StringBuilder s = new StringBuilder();
     String name = cert.getString(COSName.NAME, "Unknown");
@@ -158,7 +169,7 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
         certJSON.append(comma);
         certJSON.append("{ ");
         certJSON.append("\"serialNumber\": \"" + x509.getSerialNumber().toString() + "\",");
-        certJSON.append("\"signature\": \"" + x509.getSignature().toString() + "\",");
+        certJSON.append("\"signature\": \"" + bytesToHex(x509.getSignature()) + "\",");
         certJSON.append("\"subject\": \"" + x509.getSubjectX500Principal().toString() + "\",");
         certJSON.append("\"issuer\": \"" + x509.getIssuerX500Principal().toString() + "\"");
         certJSON.append("} ");
