@@ -21,6 +21,8 @@ import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CollectionCertStoreParameters;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -171,6 +173,17 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
         certJSON.append("\"serialNumber\": \"" + x509.getSerialNumber().toString() + "\",");
         certJSON.append("\"signature\": \"" + bytesToHex(x509.getSignature()) + "\",");
         certJSON.append("\"subject\": \"" + x509.getSubjectX500Principal().toString() + "\",");
+        certJSON.append("\"notBefore\": \"" + x509.getNotBefore().toString() + "\",");
+        certJSON.append("\"notAfter\": \"" + x509.getNotAfter().toString() + "\",");
+        try {
+          x509.checkValidity();
+          certJSON.append("\"state\": \"valid\",");
+        } catch (CertificateExpiredException e) {
+          certJSON.append("\"state\": \"expired\",");
+        } catch (CertificateNotYetValidException e) {
+          certJSON.append("\"state\": \"notYet\",");
+        }
+
         certJSON.append("\"issuer\": \"" + x509.getIssuerX500Principal().toString() + "\"");
         certJSON.append("} ");
         comma = ",";
