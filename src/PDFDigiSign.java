@@ -17,6 +17,7 @@ import java.lang.StringBuilder;
 import java.security.PrivateKey;
 import java.security.cert.CertStore;
 import java.security.cert.Certificate;
+import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CollectionCertStoreParameters;
@@ -142,12 +143,15 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
     try {
       COSString certString = (COSString) cert.getDictionaryObject(COSName.CONTENTS);
       byte[] certData = certString.getBytes();
+      Log.d(TAG, "CERTdata:"+ certData.length);
       CertificateFactory factory = CertificateFactory.getInstance("X.509");
       ByteArrayInputStream certStream = new ByteArrayInputStream(certData);
-      Collection<? extends Certificate> certs = factory.generateCertificates(certStream);
+      final CertPath certPath = factory.generateCertPath(certStream, "PKCS7");
+      Collection<? extends Certificate> certs = certPath.getCertificates();
 
       StringBuilder certJSON = new StringBuilder();
 
+      Log.d(TAG, "CERT:"+ certs);
       String comma = "";
       for (Certificate c: certs) {
         X509Certificate x509 = (X509Certificate) c;
@@ -164,7 +168,7 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
       s.append("}");
     } catch (CertificateException e) {
       e.printStackTrace();
-      s = null;
+      s = new StringBuilder();
     }
 
 
