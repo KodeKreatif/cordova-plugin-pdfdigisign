@@ -58,6 +58,13 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface;
 
+
+import id.co.kodekreatif.pdfvalidator.*;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+
 public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
 
   private static BouncyCastleProvider provider = new BouncyCastleProvider();
@@ -99,7 +106,11 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
       cordova.getThreadPool().execute(new Runnable() {
         public void run() {
             try {
-              String info = validate(path);
+              Gson gson = new GsonBuilder().create();
+              Verificator v = new Verificator(path);
+              final PDFDocumentInfo s = v.validate();
+              
+              String info = gson.toJson(s);
               if (info == null) {
                 callbackContext.error(0);
               } else {
@@ -118,128 +129,6 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
 
       return false;
     }
-  }
-
-  // http://stackoverflow.com/a/9855338
-  private static String bytesToHex(byte[] bytes) {
-    final char[] hexArray = "0123456789ABCDEF".toCharArray();
-    char[] hexChars = new char[bytes.length * 2];
-    for ( int j = 0; j < bytes.length; j++ ) {
-      int v = bytes[j] & 0xFF;
-      hexChars[j * 2] = hexArray[v >>> 4];
-      hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-    }
-    return new String(hexChars);
-  }
-  public String getInfoFromCert(final COSDictionary cert) {
-    StringBuilder s = new StringBuilder();
-    String name = cert.getString(COSName.NAME, "Unknown");
-    String location = cert.getString(COSName.LOCATION, "Unknown");
-    String reason = cert.getString(COSName.REASON, "Unknown");
-    String contactInfo = cert.getString(COSName.CONTACT_INFO, "Unknown");
-    String modified = cert.getString(COSName.M);
-
-    s.append("{");
-    s.append("\"hasSignature\":true,");
-    s.append("\"name\":\"" + name + "\", ");
-    s.append("\"modified\": \"" + modified + "\", ");
-    s.append("\"location\": \"" + location + "\", ");
-    s.append("\"reason\": \"" + reason + "\", ");
-    s.append("\"contactInfo\": \"" + contactInfo + "\", ");
-
-    COSName subFilter = (COSName) cert.getDictionaryObject(COSName.SUB_FILTER);
-
-    if (subFilter == null) {
-      return null;
-    }
-
-    try {
-      COSString certString = (COSString) cert.getDictionaryObject(COSName.CONTENTS);
-      byte[] certData = certString.getBytes();
-      Log.d(TAG, "CERTdata:"+ certData.length);
-      CertificateFactory factory = CertificateFactory.getInstance("X.509");
-      ByteArrayInputStream certStream = new ByteArrayInputStream(certData);
-      final CertPath certPath = factory.generateCertPath(certStream, "PKCS7");
-      Collection<? extends Certificate> certs = certPath.getCertificates();
-
-      StringBuilder certJSON = new StringBuilder();
-
-      Log.d(TAG, "CERT:"+ certs);
-      String comma = "";
-      for (Certificate c: certs) {
-        X509Certificate x509 = (X509Certificate) c;
-        certJSON.append(comma);
-        certJSON.append("{ ");
-        certJSON.append("\"serialNumber\": \"" + x509.getSerialNumber().toString() + "\",");
-        certJSON.append("\"signature\": \"" + bytesToHex(x509.getSignature()) + "\",");
-        certJSON.append("\"subject\": \"" + x509.getSubjectX500Principal().toString() + "\",");
-        certJSON.append("\"notBefore\": \"" + x509.getNotBefore().toString() + "\",");
-        certJSON.append("\"notAfter\": \"" + x509.getNotAfter().toString() + "\",");
-        try {
-          x509.checkValidity();
-          certJSON.append("\"state\": \"valid\",");
-        } catch (CertificateExpiredException e) {
-          certJSON.append("\"state\": \"expired\",");
-        } catch (CertificateNotYetValidException e) {
-          certJSON.append("\"state\": \"notYet\",");
-        }
-
-        certJSON.append("\"issuer\": \"" + x509.getIssuerX500Principal().toString() + "\"");
-        certJSON.append("} ");
-        comma = ",";
-      }
-      s.append("\"certs\": [" + certJSON.toString() + "]");
-      s.append("}");
-    } catch (CertificateException e) {
-      e.printStackTrace();
-      s = new StringBuilder();
-    }
-
-
-    return s.toString();
-  }
-
-  public String validate(final String path) throws IOException, CertificateException {
-    String infoString = null;
-    PDDocument document = null;
-    try {
-      document = PDDocument.load(new File(path));
-
-      COSDictionary trailer = document.getDocument().getTrailer();
-      COSDictionary root = (COSDictionary) trailer.getDictionaryObject(COSName.ROOT);
-      COSDictionary acroForm = (COSDictionary) root.getDictionaryObject(COSName.ACRO_FORM);
-      Log.d(TAG, "acroForm " + path + ": " +(acroForm == null));
-      if (acroForm == null) {
-        infoString = "{ \"hasSignature\": false}";
-        return infoString;
-      }
-      COSArray fields = (COSArray) acroForm.getDictionaryObject(COSName.FIELDS);
-
-      boolean certFound = false;
-      for (int i = 0; i < fields.size(); i ++) {
-        COSDictionary field = (COSDictionary) fields.getObject(i);
-
-        COSName type = field.getCOSName(COSName.FT);
-        if (COSName.SIG.equals(type)) {
-          COSDictionary cert = (COSDictionary) field.getDictionaryObject(COSName.V);
-          if (cert != null) {
-            infoString = getInfoFromCert(cert);
-            certFound = true;
-          }
-        }
-
-      }
-      if (certFound != true) {
-        infoString = "{ \"hasSignature\": false}";
-      }
-
-    }
-    finally {
-      if (document != null) {
-        document.close();
-      }
-    }
-    return infoString;
   }
 
   public void signWithAlias(final String path, final String alias, final String name, final String location, final String reason) throws IOException, InterruptedException, KeyChainException 
