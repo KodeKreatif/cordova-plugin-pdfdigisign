@@ -34,6 +34,7 @@ import android.security.KeyChain;
 import android.security.KeyChainException;
 import android.security.KeyChainAliasCallback;
 import android.util.Log;
+import android.os.Environment;
 
 import org.spongycastle.asn1.ASN1Primitive;
 import org.spongycastle.cert.X509CertificateHolder;
@@ -49,23 +50,13 @@ import org.spongycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.spongycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.spongycastle.util.Store;
 
-import org.apache.pdfbox.cos.COSArray;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSString;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
-import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface;
-
-
-import id.co.kodekreatif.pdfvalidator.*;
+import id.co.kodekreatif.pdfdigisign.*;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 
-public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
+public class PDFDigiSign extends CordovaPlugin {
 
   private static BouncyCastleProvider provider = new BouncyCastleProvider();
   private static final String TAG = PDFDigiSign.class.getSimpleName();
@@ -138,7 +129,6 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
     this.callbackContext = callbackContext;
     privKey = KeyChain.getPrivateKey(context, alias);
     Certificate[] chain = KeyChain.getCertificateChain(context, alias);
-    cert = chain[0];
     File document = new File(path);
 
     if (!(document != null && document.exists()))
@@ -147,18 +137,10 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
     File outputDocument = new File(document.getPath() + ".signed.pdf");
     FileOutputStream fos = new FileOutputStream(outputDocument);
 
-    PDDocument doc = PDDocument.load(document);
-
-    PDSignature signature = new PDSignature();
-    signature.setFilter(PDSignature.FILTER_ADOBE_PPKLITE); 
-    signature.setSubFilter(PDSignature.SUBFILTER_ADBE_PKCS7_DETACHED);
-    signature.setName(name);
-    signature.setLocation(location);
-    signature.setReason(reason);
-    signature.setSignDate(Calendar.getInstance());
-    doc.addSignature(signature, this);
-    doc.saveIncremental(fos);
-    doc.close();
+    Signature signature = new Signature(chain, privKey);
+    File outputPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+    outputPath.mkdirs();
+    signature.sign(path, outputPath.getAbsolutePath(), name, location, reason);
 
     File resultDocument = new File(path);
     File removeDocument = new File(document.getPath() + ".unsigned.pdf");
@@ -167,39 +149,6 @@ public class PDFDigiSign extends CordovaPlugin implements SignatureInterface {
     outputDocument.renameTo(resultDocument);
 
     return;
-  }
-
-
-  @Override
-  public byte[] sign(InputStream content) throws IOException 
-  {
-    CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
-    PDFDigiSignData input = new PDFDigiSignData(content);
-    List<Certificate> certs = new ArrayList<Certificate>();
-    certs.add(cert);
-
-    try
-    {
-      Store certStore = new JcaCertStore(certs);
-
-      org.spongycastle.asn1.x509.Certificate x509Cert =
-        org.spongycastle.asn1.x509.Certificate.getInstance(ASN1Primitive.fromByteArray(cert.getEncoded()));
-
-      ContentSigner sha256Signer = new JcaContentSignerBuilder("SHA256withRSA").build(privKey);
-      gen.addSignerInfoGenerator(
-               new JcaSignerInfoGeneratorBuilder(
-               new JcaDigestCalculatorProviderBuilder().build())
-               .build(sha256Signer, new X509CertificateHolder(x509Cert)));
-
-      gen.addCertificates(certStore);
-      CMSSignedData signedData = gen.generate(input, false);
-      return signedData.getEncoded();
-    }
-    catch (Exception e)
-    {
-      e.printStackTrace();
-    }
-    throw new RuntimeException("Signing error, look at the stack trace");
   }
 }
 

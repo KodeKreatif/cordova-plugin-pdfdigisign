@@ -28,13 +28,12 @@
 
         <!-- cordova plugin src files -->
         <source-file src="src/PDFDigiSign.java" target-dir="src/id/kodekreatif/cordova/PDFDigiSign" />
-        <source-file src="src/PDFDigiSignData.java" target-dir="src/id/kodekreatif/cordova/PDFDigiSign" />
         <source-file src="libs/pkix-1.51.0.0.jar" target-dir="libs/" />
         <source-file src="libs/prov-1.51.0.0.jar" target-dir="libs/" />
         <source-file src="libs/core-1.51.0.0.jar" target-dir="libs/" />
         <source-file src="libs/commons-logging-1.1.2.jar" target-dir="libs/" />
         <source-file src="libs/pdfbox-2.0.0.jar" target-dir="libs/" />
-        <source-file src="libs/pdfvalidator-1.0-SNAPSHOT.jar" target-dir="libs/" />
+        <source-file src="libs/pdfdigisign-1.0-SNAPSHOT.jar" target-dir="libs/" />
         <source-file src="libs/gson-2.2.4.jar" target-dir="libs/" />
     </platform>
 </plugin>
