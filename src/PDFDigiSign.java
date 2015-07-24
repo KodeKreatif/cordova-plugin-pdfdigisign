@@ -134,14 +134,13 @@ public class PDFDigiSign extends CordovaPlugin {
     if (!(document != null && document.exists()))
       new RuntimeException("");
 
-    File outputDocument = new File(document.getPath() + ".signed.pdf");
-    FileOutputStream fos = new FileOutputStream(outputDocument);
 
     Signature signature = new Signature(chain, privKey);
     File outputPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
     outputPath.mkdirs();
     signature.sign(path, outputPath.getAbsolutePath(), name, location, reason);
 
+    File outputDocument = new File(outputPath.getAbsolutePath() + "/" + document.getName() + ".signed.pdf");
     File resultDocument = new File(path);
     File removeDocument = new File(document.getPath() + ".unsigned.pdf");
 
