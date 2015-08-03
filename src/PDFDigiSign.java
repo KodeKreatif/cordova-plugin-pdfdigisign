@@ -50,6 +50,7 @@ import org.spongycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.spongycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.spongycastle.util.Store;
 
+import org.spongycastle.util.encoders.Base64;
 import id.co.kodekreatif.pdfdigisign.*;
 
 import com.google.gson.Gson;
@@ -77,11 +78,19 @@ public class PDFDigiSign extends CordovaPlugin {
       final String name = data.getString(2);
       final String location = data.getString(3);
       final String reason = data.getString(4);
+      final String imageBase64 = data.getString(5);
+      final byte[] imageData = Base64.decode(imageBase64);
+      final int page = data.getInt(6);
+      final float x = (float)data.getDouble(7); 
+      final float y = (float)data.getDouble(8);
+      final float width = (float)data.getDouble(9);
+      final float height = (float)data.getDouble(10);
       cordova.getThreadPool().execute(new Runnable() {
         public void run() {
             try {
               signWithAlias(path, alias, 
-                  name, location, reason);
+                  name, location, reason, 
+                  imageData, page, x, y, width, height);
               callbackContext.success(); // Thread-safe.
             }
             catch (Exception e)
@@ -122,7 +131,17 @@ public class PDFDigiSign extends CordovaPlugin {
     }
   }
 
-  public void signWithAlias(final String path, final String alias, final String name, final String location, final String reason) throws IOException, InterruptedException, KeyChainException 
+  public void signWithAlias(final String path, 
+      final String alias, 
+      final String name, 
+      final String location, 
+      final String reason, 
+      byte[] imageData,
+      int page,
+      float x,
+      float y,
+      float width,
+      float height) throws IOException, InterruptedException, KeyChainException 
   {
     byte[] buffer = new byte[BUFFER_SIZE];
 
@@ -138,6 +157,14 @@ public class PDFDigiSign extends CordovaPlugin {
     Signature signature = new Signature(chain, privKey);
     File outputPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
     outputPath.mkdirs();
+    if (imageData.length > 0) {
+        FileOutputStream fos = new FileOutputStream("/storage/sdcard/x.png");
+        fos.write(imageData);
+        fos.close();
+      ByteArrayInputStream image = new ByteArrayInputStream(imageData);
+      signature.setVisual(image, page, x, y, width, height);
+      System.err.println("page " + page + ":" + x + "," + y + " " + width + "x" + height);
+    }
     signature.sign(path, outputPath.getAbsolutePath(), name, location, reason);
 
     File outputDocument = new File(outputPath.getAbsolutePath() + "/" + document.getName() + ".signed.pdf");
