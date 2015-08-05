@@ -158,9 +158,6 @@ public class PDFDigiSign extends CordovaPlugin {
     File outputPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
     outputPath.mkdirs();
     if (imageData.length > 0) {
-        FileOutputStream fos = new FileOutputStream("/storage/sdcard/x.png");
-        fos.write(imageData);
-        fos.close();
       ByteArrayInputStream image = new ByteArrayInputStream(imageData);
       signature.setVisual(image, page, x, y, width, height);
       System.err.println("page " + page + ":" + x + "," + y + " " + width + "x" + height);
